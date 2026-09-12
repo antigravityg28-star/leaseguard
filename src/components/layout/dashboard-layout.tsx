@@ -5,7 +5,6 @@
 
 import { usePathname } from "next/navigation";
 import { SidebarProvider } from "@/components/layout/sidebar-provider";
-import { Sidebar } from "@/components/ui/sidebar";
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -16,12 +15,7 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
-        <Sidebar />
-        <main className="flex-1 flex flex-col overflow-auto bg-background">
-          {children}
-        </main>
-      </div>
+      {children}
     </SidebarProvider>
   );
 }
