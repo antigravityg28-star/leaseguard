@@ -1,9 +1,9 @@
 // =============================================================================
-// LEASEGUARD B2B - Sign In Form
+// LEASEGUARD B2B - Sign In Form (Direct Supabase Client)
 // =============================================================================
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -12,11 +12,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { signIn } from "@/lib/actions/auth-actions";
+import { supabase } from "@/lib/supabase";
+import { Loader2 } from "lucide-react";
+import Link from "next/link";
 
 const signinSchema = z.object({
   email: z.string().email("Email non valida"),
-  password: z.string().min(6, "Password troppo corta"),
+  password: z.string().min(6, "La password deve avere almeno 6 caratteri"),
 });
 
 type SigninFormData = z.infer<typeof signinSchema>;
@@ -24,7 +26,7 @@ type SigninFormData = z.infer<typeof signinSchema>;
 export function SignInForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
 
   const form = useForm<SigninFormData>({
     resolver: zodResolver(signinSchema),
@@ -35,50 +37,77 @@ export function SignInForm() {
   });
 
   const onSubmit = async (data: SigninFormData) => {
-    startTransition(async () => {
-      const result = await signIn(data);
-      if (result.error) {
-        toast({ title: "Errore", description: result.error, variant: "destructive" });
-      } else {
-        toast({ title: "Benvenuto!", description: "Accesso riuscito." });
-        router.push("/dashboard");
-      }
-    });
+    setIsPending(true);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: data.email.trim(),
+        password: data.password,
+      });
+
+      if (error) throw error;
+
+      toast({ title: "Bentornato!", description: "Accesso eseguito correttamente." });
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err: any) {
+      toast({
+        title: "Errore di Accesso",
+        description: err.message || "Credenziali non valide. Riprova.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsPending(false);
+    }
   };
 
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input placeholder="tuo@email.com" type="email" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="password"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Password</FormLabel>
-              <FormControl>
-                <Input placeholder="••••••••" type="password" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <Button type="submit" className="w-full" disabled={isPending}>
-          {isPending ? "Accesso in corso..." : "Accedi"}
-        </Button>
-      </form>
-    </Form>
+    <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 shadow-lg">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input placeholder="tuo@email.com" type="email" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Password</FormLabel>
+                <FormControl>
+                  <Input placeholder="••••••••" type="password" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <Button type="submit" className="w-full mt-2" disabled={isPending}>
+            {isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Accesso in corso...
+              </>
+            ) : (
+              "Accedi alla Dashboard"
+            )}
+          </Button>
+
+          <div className="pt-2 text-center text-xs text-muted-foreground">
+            Non hai ancora un account?{" "}
+            <Link href="/dashboard/auth/signup" className="text-primary font-semibold hover:underline">
+              Registrati gratis
+            </Link>
+          </div>
+        </form>
+      </Form>
+    </div>
   );
 }
