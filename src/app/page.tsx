@@ -1,5 +1,5 @@
 // =============================================================================
-// LEASEGUARD B2B - Main Landing Page (Updated: 2026-09-12)
+// LEASEGUARD B2B - Main Landing Page
 // =============================================================================
 import { redirect } from "next/navigation";
 import { createClientServer } from "@/lib/supabase/server";
@@ -16,9 +16,9 @@ export const metadata = {
 
 export default async function HomePage() {
   const supabase = await createClientServer();
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (session) {
+  if (user) {
     redirect("/dashboard");
   }
 

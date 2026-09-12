@@ -9,9 +9,9 @@ import { CriticalDates } from "@/components/dashboard/critical-dates";
 
 export default async function ContractsPage() {
   const supabase = await createClientServer();
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/dashboard/auth/signin");
   }
 
@@ -19,9 +19,9 @@ export default async function ContractsPage() {
     <DashboardLayout>
       <div className="p-6 space-y-6">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Contratti & Scadenze</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Scadenze & Contratti</h1>
           <p className="text-muted-foreground">
-            Monitoraggio scadenze, opzioni di rinnovo e calcolo adeguamenti ISTAT.
+            Monitoraggio scadenze vincolanti, finestre di disdetta PEC e calcolo ISTAT.
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-2">

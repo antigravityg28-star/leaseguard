@@ -8,9 +8,9 @@ import { CompanySettings } from "@/components/settings/company-settings";
 
 export default async function SettingsPage() {
   const supabase = await createClientServer();
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/dashboard/auth/signin");
   }
 

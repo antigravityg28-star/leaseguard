@@ -10,9 +10,9 @@ import { CriticalDates } from "@/components/dashboard/critical-dates";
 
 export default async function DashboardPage() {
   const supabase = await createClientServer();
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/dashboard/auth/signin");
   }
 
@@ -22,7 +22,7 @@ export default async function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
           <p className="text-muted-foreground">
-            Benvenuto nel tuo cruscotto LeaseGuard. Monitora i tuoi affitti commerciali.
+            Benvenuto nel tuo cruscotto LeaseGuard B2B. Monitora i tuoi affitti commerciali.
           </p>
         </div>
         <StatsCards />

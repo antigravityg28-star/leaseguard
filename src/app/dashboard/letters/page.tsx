@@ -8,9 +8,9 @@ import { LegalLetterGenerator } from "@/components/letters/legal-letter-generato
 
 export default async function LettersPage() {
   const supabase = await createClientServer();
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/dashboard/auth/signin");
   }
 
