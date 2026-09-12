@@ -1,5 +1,5 @@
 // =============================================================================
-// LEASEGUARD B2B - Main Landing Page
+// LEASEGUARD B2B - Main Landing Page (Updated: 2026-09-12)
 // =============================================================================
 import { redirect } from "next/navigation";
 import { createClientServer } from "@/lib/supabase/server";
@@ -10,8 +10,8 @@ import { PricingSection } from "@/components/landing/pricing-section";
 import { Footer } from "@/components/landing/footer";
 
 export const metadata = {
-  title: "LeaseGuard B2B — Proteggi i tuoi Affitti Commerciali in Italia",
-  description: "La 1ª piattaforma per negozi, ristoranti e franchising. Monitoraggio disdette PEC 6+6, calcolo ISTAT FOI al 75% e tutela contrattuale completa.",
+  title: "LeaseGuard B2B — Tutti i software aiutano il proprietario. Noi difendiamo chi paga l'affitto.",
+  description: "La 1ª piattaforma in Italia per negozi, ristoranti e franchising. Monitoraggio disdette PEC 6+6, calcolo ISTAT FOI al 75% e recupero arretrati.",
 };
 
 export default async function HomePage() {
