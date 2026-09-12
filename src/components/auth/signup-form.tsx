@@ -1,10 +1,9 @@
 // =============================================================================
-// LEASEGUARD B2B - Sign Up Form (Direct Supabase Client with Profile & Company)
+// LEASEGUARD B2B - Sign Up Form (Direct Supabase SSR Client with Hard Navigation)
 // =============================================================================
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -27,7 +26,6 @@ const signupSchema = z.object({
 type SignupFormData = z.infer<typeof signupSchema>;
 
 export function SignUpForm() {
-  const router = useRouter();
   const { toast } = useToast();
   const [isPending, setIsPending] = useState(false);
 
@@ -92,11 +90,11 @@ export function SignUpForm() {
 
       toast({
         title: "Account Creato con Successo!",
-        description: "Benvenuto su LeaseGuard B2B.",
+        description: "Accesso in corso alla Dashboard...",
       });
 
-      router.push("/dashboard");
-      router.refresh();
+      // Navigazione completa con cookie sincronizzati
+      window.location.href = "/dashboard";
     } catch (err: any) {
       console.error("Signup error:", err);
       toast({
@@ -104,7 +102,6 @@ export function SignUpForm() {
         description: err.message || "Impossibile completare la registrazione.",
         variant: "destructive",
       });
-    } finally {
       setIsPending(false);
     }
   };

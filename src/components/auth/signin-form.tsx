@@ -1,10 +1,9 @@
 // =============================================================================
-// LEASEGUARD B2B - Sign In Form (Direct Supabase Client)
+// LEASEGUARD B2B - Sign In Form (Direct Supabase SSR Client with Hard Navigation)
 // =============================================================================
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -24,7 +23,6 @@ const signinSchema = z.object({
 type SigninFormData = z.infer<typeof signinSchema>;
 
 export function SignInForm() {
-  const router = useRouter();
   const { toast } = useToast();
   const [isPending, setIsPending] = useState(false);
 
@@ -39,23 +37,27 @@ export function SignInForm() {
   const onSubmit = async (data: SigninFormData) => {
     setIsPending(true);
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data: authData, error } = await supabase.auth.signInWithPassword({
         email: data.email.trim(),
         password: data.password,
       });
 
       if (error) throw error;
 
-      toast({ title: "Bentornato!", description: "Accesso eseguito correttamente." });
-      router.push("/dashboard");
-      router.refresh();
+      if (!authData.session) {
+        throw new Error("Sessione non avviata. Verifica le tue credenziali.");
+      }
+
+      toast({ title: "Bentornato!", description: "Accesso in corso alla Dashboard..." });
+
+      // Navigazione completa con cookie sincronizzati
+      window.location.href = "/dashboard";
     } catch (err: any) {
       toast({
         title: "Errore di Accesso",
         description: err.message || "Credenziali non valide. Riprova.",
         variant: "destructive",
       });
-    } finally {
       setIsPending(false);
     }
   };
