@@ -26,6 +26,22 @@ export function BillingOverview() {
     }
   };
 
+  const handleManagePortal = async () => {
+    try {
+      const res = await fetch("/api/billing/portal", {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        toast({ title: "Attenzione", description: data.error || "Nessuna sottoscrizione attiva trovata." });
+      }
+    } catch (err) {
+      toast({ title: "Errore", description: "Impossibile aprire il portale pagamenti.", variant: "destructive" });
+    }
+  };
+
   return (
     <div className="grid gap-6 sm:grid-cols-2">
       <Card>
@@ -56,7 +72,7 @@ export function BillingOverview() {
               <div className="h-8 w-12 rounded bg-blue-100 flex items-center justify-center text-[10px] font-bold text-blue-800">VISA</div>
               <span className="text-sm text-muted-foreground">•••• •••• •••• 4242</span>
             </div>
-            <Button variant="outline" size="sm">Aggiorna</Button>
+            <Button variant="outline" size="sm" onClick={handleManagePortal}>Gestisci Fatture & Carta</Button>
           </div>
         </CardContent>
       </Card>
