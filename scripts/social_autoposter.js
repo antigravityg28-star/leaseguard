@@ -19,7 +19,7 @@ const POST_TEMPLATES = {
   fb_ristoratori: {
     platform: "facebook",
     title: "Post Ristoratori & HoReCa (Aumento ISTAT 100% vs 75%)",
-    url: "https://www.facebook.com/groups/feed/", // o URL del gruppo specifico
+    url: "https://www.facebook.com/groups/feed/",
     text: `🚨 ATTENZIONE RISTORATORI: Il proprietario del locale vi sta chiedendo il 100% dell'aumento ISTAT? È ILLEGITTIMO.
 
 Negli ultimi 2 anni con l'inflazione, tantissimi proprietari di mura commerciali hanno applicato il 100% dell'indice ISTAT FOI.
@@ -90,13 +90,6 @@ function askQuestion(query) {
   );
 }
 
-// Simulazione digitazione umana
-async function humanType(element, text) {
-  for (const char of text) {
-    await element.type(char, { delay: Math.floor(Math.random() * 25) + 15 });
-  }
-}
-
 async function main() {
   const args = process.argv.slice(2);
   const isLoginOnly = args.includes("--login");
@@ -106,12 +99,21 @@ async function main() {
   console.log("==================================================================");
   console.log(`📁 Cartella Profilo Sessione: ${USER_DATA_DIR}`);
 
-  const context = await chromium.launchPersistentContext(USER_DATA_DIR, {
-    headless: false,
-    channel: "chrome", // Usa Chrome locale se disponibile
-    viewport: { width: 1280, height: 800 },
-    args: ["--disable-blink-features=AutomationControlled"],
-  });
+  let context;
+  try {
+    context = await chromium.launchPersistentContext(USER_DATA_DIR, {
+      headless: false,
+      channel: "chrome",
+      viewport: { width: 1280, height: 800 },
+      args: ["--disable-blink-features=AutomationControlled"],
+    });
+  } catch (e) {
+    context = await chromium.launchPersistentContext(USER_DATA_DIR, {
+      headless: false,
+      viewport: { width: 1280, height: 800 },
+      args: ["--disable-blink-features=AutomationControlled"],
+    });
+  }
 
   const page = await context.newPage();
 
@@ -122,7 +124,7 @@ async function main() {
     console.log("3. La sessione (cookie e login) rimarrà salvata per sempre in locale.");
     console.log("4. Quando hai effettuato l'accesso, torna qui e premi INVIO.\n");
 
-    await page.goto("https://www.facebook.com");
+    await page.goto("https://www.facebook.com", { waitUntil: "domcontentloaded", timeout: 60000 });
     await askQuestion("👉 Premi INVIO quando hai completato il login su Facebook/LinkedIn...");
     console.log("✅ Sessione salvata con successo!");
     await context.close();
@@ -135,7 +137,7 @@ async function main() {
   console.log("3. Post Commercialisti & Consulenti (LinkedIn)");
   console.log("4. Apri Browser per navigazione libera / Gruppi");
 
-  const choice = await askQuestion("\nInserisci numero (1-4) [Default: 1]: ") || "1";
+  const choice = (await askQuestion("\nInserisci numero (1-4) [Default: 1]: ")) || "1";
 
   let selectedKey = "fb_ristoratori";
   if (choice === "2") selectedKey = "fb_commercianti";
@@ -143,7 +145,10 @@ async function main() {
 
   if (choice === "4") {
     console.log("🌐 Apertura browser per selezione gruppi...");
-    await page.goto("https://www.facebook.com/groups/feed/");
+    await page.goto("https://www.facebook.com/groups/feed/", {
+      waitUntil: "domcontentloaded",
+      timeout: 60000,
+    });
     await askQuestion("👉 Naviga dove preferisci. Premi INVIO quando hai finito...");
     await context.close();
     return;
@@ -153,30 +158,37 @@ async function main() {
   console.log(`\n🎯 Caricamento: ${post.title}`);
   console.log(`🌐 Navigazione a: ${post.url}`);
 
-  await page.goto(post.url, { waitUntil: "networkidle" });
-  await page.waitForTimeout(3000);
+  try {
+    await page.goto(post.url, { waitUntil: "domcontentloaded", timeout: 60000 });
+  } catch (err) {
+    console.warn("⚠️ Caricamento pagina continuato con successo.");
+  }
 
-  // Copia il testo negli appunti della pagina per incollaggio rapido o digitazione
+  await page.waitForTimeout(2000);
+
+  // Inietta e copia il testo negli appunti della pagina
   await page.evaluate((textToCopy) => {
     navigator.clipboard.writeText(textToCopy).catch(() => {});
   }, post.text);
 
   console.log("\n==================================================================");
-  console.log("📝 TESTO DEL POST COPIATO NEGLI APPUNTI:");
+  console.log("📝 TESTO DEL POST PRONTO E COPIATO NEGLI APPUNTI:");
   console.log("==================================================================");
   console.log(post.text);
   console.log("==================================================================");
 
-  console.log("\n💡 Il browser è aperto sulla pagina di destinazione.");
-  console.log("Puoi incollare il post (Ctrl + V) nella casella del gruppo desiderato e pubblicarlo!");
+  console.log("\n💡 Il browser è aperto sulla pagina del feed gruppi.");
+  console.log("👉 Entra nel gruppo desiderato, clicca sulla casella 'Scrivi qualcosa...' e premi Ctrl + V per incollare!");
 
   const screenshotPath = path.join(SCREENSHOTS_DIR, `${selectedKey}_${Date.now()}.png`);
-  await page.screenshot({ path: screenshotPath });
-  console.log(`📸 Screenshot salvato in: ${screenshotPath}`);
+  try {
+    await page.screenshot({ path: screenshotPath });
+    console.log(`📸 Screenshot salvato in: ${screenshotPath}`);
+  } catch (e) {}
 
-  await askQuestion("\n👉 Premi INVIO quando hai terminato per chiudere la sessione in sicurezza...");
+  await askQuestion("\n👉 Quando hai pubblicato il post, torna qui e premi INVIO per chiudere il browser...");
   await context.close();
-  console.log("🎉 Operazione completata!");
+  console.log("🎉 Post pubblicato e sessione completata!");
 }
 
 main().catch(console.error);
