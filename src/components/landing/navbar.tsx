@@ -31,20 +31,20 @@ export function Navbar() {
 
         {/* Desktop Navigation Links */}
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-muted-foreground">
-          <a href="#come-funziona" className="transition-colors hover:text-foreground">
+          <a href="/#come-funziona" className="transition-colors hover:text-foreground">
             Come Funziona
           </a>
-          <a href="#calcolatore" className="transition-colors hover:text-foreground flex items-center gap-1">
+          <Link href="/calcolatore-istat" className="transition-colors hover:text-foreground flex items-center gap-1 font-semibold text-foreground">
             <Sparkles className="h-3.5 w-3.5 text-primary" />
             Calcolatore ISTAT
-          </a>
-          <a href="#funzionalita" className="transition-colors hover:text-foreground">
-            Funzionalità
-          </a>
-          <a href="#prezzi" className="transition-colors hover:text-foreground">
+          </Link>
+          <Link href="/guide" className="transition-colors hover:text-foreground">
+            Guide Legali
+          </Link>
+          <a href="/#prezzi" className="transition-colors hover:text-foreground">
             Prezzi
           </a>
-          <a href="#faq" className="transition-colors hover:text-foreground">
+          <a href="/#faq" className="transition-colors hover:text-foreground">
             FAQ
           </a>
         </nav>

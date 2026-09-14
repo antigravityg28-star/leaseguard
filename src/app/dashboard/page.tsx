@@ -7,6 +7,7 @@ import { DashboardLayout } from "@/components/layout/dashboard-layout";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RecentLeases } from "@/components/dashboard/recent-leases";
 import { CriticalDates } from "@/components/dashboard/critical-dates";
+import { OnboardingBanner } from "@/components/dashboard/onboarding-banner";
 
 export default async function DashboardPage() {
   const supabase = await createClientServer();
@@ -25,6 +26,7 @@ export default async function DashboardPage() {
             Benvenuto nel tuo cruscotto LeaseGuard B2B. Monitora i tuoi affitti commerciali.
           </p>
         </div>
+        <OnboardingBanner />
         <StatsCards />
         <div className="grid gap-6 sm:grid-cols-2">
           <RecentLeases />
