@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "outreach": "node scripts/b2b_outreach.js"
+    "outreach": "node scripts/b2b_outreach.js",
+    "post:social": "node scripts/social_autoposter.js",
+    "post:social:login": "node scripts/social_autoposter.js --login"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -64,6 +66,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
+    "playwright": "^1.63.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
