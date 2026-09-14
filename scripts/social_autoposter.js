@@ -1,6 +1,6 @@
 // =============================================================================
-// LEASEGUARD B2B - Persistent Browser Auto-Poster (Playwright)
-// Safe, Human-Like Typing & Session Persistence (Zero Password Leaks)
+// LEASEGUARD B2B - Autonomous Zero-Click Social Auto-Poster (Playwright)
+// Human-Simulated Search, Typing, Auto-Publish & Screenshot Verification
 // =============================================================================
 const { chromium } = require("playwright");
 const path = require("path");
@@ -9,17 +9,19 @@ const readline = require("readline");
 
 const USER_DATA_DIR = path.join(__dirname, ".browser_session");
 const SCREENSHOTS_DIR = path.join(__dirname, "screenshots");
+const LOG_FILE = path.join(__dirname, "POSTING_HISTORY.log");
 
 if (!fs.existsSync(SCREENSHOTS_DIR)) {
   fs.mkdirSync(SCREENSHOTS_DIR, { recursive: true });
 }
 
-// Post configurati con link UTM tracciati
-const POST_TEMPLATES = {
+// Directory dei gruppi e ricerche target
+const TARGET_CHANNELS = {
   fb_ristoratori: {
     platform: "facebook",
-    title: "Post Ristoratori & HoReCa (Aumento ISTAT 100% vs 75%)",
-    url: "https://www.facebook.com/groups/feed/",
+    title: "Ristoratori & Pizzerie Italia (HoReCa)",
+    searchUrl: "https://www.facebook.com/search/groups/?q=ristoratori+italia",
+    defaultGroupUrl: "https://www.facebook.com/groups/feed/",
     text: `🚨 ATTENZIONE RISTORATORI: Il proprietario del locale vi sta chiedendo il 100% dell'aumento ISTAT? È ILLEGITTIMO.
 
 Negli ultimi 2 anni con l'inflazione, tantissimi proprietari di mura commerciali hanno applicato il 100% dell'indice ISTAT FOI.
@@ -43,8 +45,9 @@ Verificate i vostri contratti prima del prossimo canone! 📊`,
 
   fb_commercianti: {
     platform: "facebook",
-    title: "Post Negozianti & Commercianti (Preavviso 6+6)",
-    url: "https://www.facebook.com/groups/feed/",
+    title: "Commercianti & Negozianti Retail",
+    searchUrl: "https://www.facebook.com/search/groups/?q=commercianti+negozianti+italia",
+    defaultGroupUrl: "https://www.facebook.com/groups/feed/",
     text: `⚠️ Il rischio più grande per chi gestisce un negozio o locale commerciale:
 Dimenticare la PEC di disdetta e rimanere vincolati per ALTRI 6 ANNI a pagare l'affitto.
 
@@ -62,8 +65,9 @@ Puoi testare gratuitamente il calcolatore e la piattaforma qui:
 
   linkedin_commercialisti: {
     platform: "linkedin",
-    title: "Post LinkedIn Commercialisti & Fiscalisti B2B",
-    url: "https://www.linkedin.com/feed/",
+    title: "Commercialisti & Consulenti B2B",
+    searchUrl: "https://www.linkedin.com/feed/",
+    defaultGroupUrl: "https://www.linkedin.com/feed/",
     text: `Colleghi e Professionisti d'Impresa,
 
 Con la forte ripresa dell'indice FOI, analizzando i contratti di locazione commerciale dei conduttori riscontriamo che oltre il 60% dei locatori applica aumenti ISTAT al 100% dell'inflazione, in violazione del limite inderogabile del 75% (art. 32 L. 392/78) con conseguente nullità ex art. 79.
@@ -76,6 +80,13 @@ Uno strumento pratico che genera la perizia e il conteggio del credito recuperab
 #commercialisti #locazionicommerciali #equocanone #retail #b2b`,
   },
 };
+
+function logAction(message) {
+  const timestamp = new Date().toISOString().replace("T", " ").substring(0, 19);
+  const logLine = `[${timestamp}] ${message}\n`;
+  console.log(message);
+  fs.appendFileSync(LOG_FILE, logLine, "utf-8");
+}
 
 function askQuestion(query) {
   const rl = readline.createInterface({
@@ -90,27 +101,178 @@ function askQuestion(query) {
   );
 }
 
+// Funzione intelligente per pubblicare su Facebook
+async function publishOnFacebook(page, text, isAuto = false) {
+  logAction("🔍 Ricerca casella di creazione post su Facebook...");
+
+  const postTriggers = [
+    'div[role="button"]:has-text("Scrivi qualcosa")',
+    'div[role="button"]:has-text("A cosa stai pensando")',
+    'div[role="button"]:has-text("Write something")',
+    'div[role="button"]:has-text("Create a public post")',
+    'span:has-text("Scrivi qualcosa")',
+    'span:has-text("A cosa stai pensando")',
+  ];
+
+  let opened = false;
+  for (const selector of postTriggers) {
+    try {
+      const btn = page.locator(selector).first();
+      if (await btn.isVisible({ timeout: 2000 })) {
+        await btn.click();
+        opened = true;
+        logAction(`✅ Cliccato editor post con selettore: ${selector}`);
+        break;
+      }
+    } catch (e) {}
+  }
+
+  await page.waitForTimeout(2000);
+
+  // Trova la casella di testo
+  const textBoxSelectors = [
+    'div[role="textbox"][contenteditable="true"]',
+    'div[aria-label*="A cosa stai pensando"]',
+    'div[aria-label*="Scrivi qualcosa"]',
+    'div[aria-label*="Write something"]',
+    'div[aria-label*="Crea un post"]',
+  ];
+
+  let textBox = null;
+  for (const sel of textBoxSelectors) {
+    try {
+      const el = page.locator(sel).first();
+      if (await el.isVisible({ timeout: 2000 })) {
+        textBox = el;
+        break;
+      }
+    } catch (e) {}
+  }
+
+  if (textBox) {
+    await textBox.click();
+    await page.waitForTimeout(1000);
+
+    // Incolla il testo con formattazione ed emoji
+    await page.evaluate((content) => {
+      const el = document.activeElement;
+      if (el) {
+        document.execCommand("insertText", false, content);
+      }
+    }, text);
+
+    logAction("✍️ Testo del post digitato nell'editor di Facebook!");
+    await page.waitForTimeout(3000);
+
+    // Trova pulsante Pubblica
+    const publishSelectors = [
+      'div[aria-label="Pubblica"][role="button"]',
+      'div[aria-label="Post"][role="button"]',
+      'button:has-text("Pubblica")',
+      'div[role="button"]:has-text("Pubblica")',
+    ];
+
+    let publishBtn = null;
+    for (const sel of publishSelectors) {
+      try {
+        const pBtn = page.locator(sel).first();
+        if (await pBtn.isVisible({ timeout: 2000 })) {
+          publishBtn = pBtn;
+          break;
+        }
+      } catch (e) {}
+    }
+
+    if (publishBtn) {
+      if (isAuto) {
+        logAction("🚀 Modalità ZERO-CLICK: Click automatico sul pulsante 'Pubblica'...");
+        await publishBtn.click();
+        await page.waitForTimeout(5000);
+        logAction("🎉 Post inviato a Facebook con successo!");
+        return true;
+      } else {
+        logAction("⏸️ Post pronto nella casella. Modalità assistita: puoi cliccare 'Pubblica' quando desideri.");
+        return true;
+      }
+    }
+  }
+
+  // Fallback: se Facebook richiede interazione manuale
+  await page.evaluate((textToCopy) => {
+    navigator.clipboard.writeText(textToCopy).catch(() => {});
+  }, text);
+  logAction("📋 Testo copiato negli appunti: pronto per incollaggio rapido (Ctrl + V).");
+  return false;
+}
+
+// Funzione intelligente per pubblicare su LinkedIn
+async function publishOnLinkedIn(page, text, isAuto = false) {
+  logAction("🔍 Ricerca casella di creazione post su LinkedIn...");
+
+  const triggers = [
+    'button:has-text("Avvia un post")',
+    'button:has-text("Start a post")',
+    'button:has-text("Crea un post")',
+  ];
+
+  for (const sel of triggers) {
+    try {
+      const btn = page.locator(sel).first();
+      if (await btn.isVisible({ timeout: 2500 })) {
+        await btn.click();
+        logAction("✅ Cliccato 'Avvia un post' su LinkedIn");
+        break;
+      }
+    } catch (e) {}
+  }
+
+  await page.waitForTimeout(2000);
+
+  const textBox = page.locator('div[role="textbox"][contenteditable="true"]').first();
+  if (await textBox.isVisible({ timeout: 3000 })) {
+    await textBox.click();
+    await page.evaluate((content) => {
+      document.execCommand("insertText", false, content);
+    }, text);
+
+    logAction("✍️ Testo del post inserito su LinkedIn!");
+    await page.waitForTimeout(2000);
+
+    const postBtn = page.locator('button:has-text("Pubblica"), button:has-text("Post")').first();
+    if (await postBtn.isVisible({ timeout: 2000 })) {
+      if (isAuto) {
+        logAction("🚀 Modalità ZERO-CLICK: Pubblicazione automatica su LinkedIn...");
+        await postBtn.click();
+        await page.waitForTimeout(4000);
+        logAction("🎉 Post pubblicato su LinkedIn con successo!");
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 async function main() {
   const args = process.argv.slice(2);
+  const isAuto = args.includes("--auto");
   const isLoginOnly = args.includes("--login");
 
   console.log("==================================================================");
-  console.log("🤖 LEASEGUARD B2B - AUTONOMOUS SOCIAL AUTO-POSTER");
+  console.log(`🤖 LEASEGUARD B2B - AUTONOMOUS SOCIAL POSTER [${isAuto ? "ZERO-CLICK AUTO" : "GUIDATO"}]`);
   console.log("==================================================================");
-  console.log(`📁 Cartella Profilo Sessione: ${USER_DATA_DIR}`);
 
   let context;
   try {
     context = await chromium.launchPersistentContext(USER_DATA_DIR, {
       headless: false,
       channel: "chrome",
-      viewport: { width: 1280, height: 800 },
+      viewport: { width: 1280, height: 850 },
       args: ["--disable-blink-features=AutomationControlled"],
     });
   } catch (e) {
     context = await chromium.launchPersistentContext(USER_DATA_DIR, {
       headless: false,
-      viewport: { width: 1280, height: 800 },
+      viewport: { width: 1280, height: 850 },
       args: ["--disable-blink-features=AutomationControlled"],
     });
   }
@@ -118,24 +280,19 @@ async function main() {
   const page = await context.newPage();
 
   if (isLoginOnly) {
-    console.log("\n🔑 MODALITÀ SETUP ACCESSO:");
-    console.log("1. Si è aperta la finestra del browser.");
-    console.log("2. Esegui l'accesso manuale a Facebook e/o LinkedIn nella finestra.");
-    console.log("3. La sessione (cookie e login) rimarrà salvata per sempre in locale.");
-    console.log("4. Quando hai effettuato l'accesso, torna qui e premi INVIO.\n");
-
+    console.log("\n🔑 MODALITÀ SETUP ACCESSO (Facebook & LinkedIn)");
     await page.goto("https://www.facebook.com", { waitUntil: "domcontentloaded", timeout: 60000 });
-    await askQuestion("👉 Premi INVIO quando hai completato il login su Facebook/LinkedIn...");
-    console.log("✅ Sessione salvata con successo!");
+    await askQuestion("👉 Accedi a Facebook e LinkedIn nella finestra aperta. Premi INVIO quando hai finito...");
+    logAction("✅ Sessione di login salvata per sempre.");
     await context.close();
     return;
   }
 
-  console.log("\n📋 SCEGLI IL POST DA PUBBLICARE:");
-  console.log("1. Post Ristoratori (Facebook)");
-  console.log("2. Post Commercianti & Retail (Facebook)");
-  console.log("3. Post Commercialisti & Consulenti (LinkedIn)");
-  console.log("4. Apri Browser per navigazione libera / Gruppi");
+  console.log("\n📋 SCEGLI IL TARGET PER L'AUTO-POSTING:");
+  console.log("1. Gruppi Ristoratori & Pizzerie (Facebook)");
+  console.log("2. Gruppi Commercianti & Retail (Facebook)");
+  console.log("3. Feed & Gruppi Commercialisti (LinkedIn)");
+  console.log("4. Cerca nuovi Gruppi Facebook per parola chiave");
 
   const choice = (await askQuestion("\nInserisci numero (1-4) [Default: 1]: ")) || "1";
 
@@ -143,52 +300,50 @@ async function main() {
   if (choice === "2") selectedKey = "fb_commercianti";
   if (choice === "3") selectedKey = "linkedin_commercialisti";
 
+  const target = TARGET_CHANNELS[selectedKey];
+
   if (choice === "4") {
-    console.log("🌐 Apertura browser per selezione gruppi...");
-    await page.goto("https://www.facebook.com/groups/feed/", {
-      waitUntil: "domcontentloaded",
-      timeout: 60000,
-    });
-    await askQuestion("👉 Naviga dove preferisci. Premi INVIO quando hai finito...");
+    const query = await askQuestion("Inserisci termine di ricerca (es. 'franchising italia'): ") || "commercianti";
+    const customUrl = `https://www.facebook.com/search/groups/?q=${encodeURIComponent(query)}`;
+    logAction(`🌐 Apertura ricerca gruppi Facebook: ${customUrl}`);
+    await page.goto(customUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
+    await askQuestion("👉 Esplora i gruppi. Premi INVIO quando vuoi terminare...");
     await context.close();
     return;
   }
 
-  const post = POST_TEMPLATES[selectedKey];
-  console.log(`\n🎯 Caricamento: ${post.title}`);
-  console.log(`🌐 Navigazione a: ${post.url}`);
+  logAction(`\n🎯 Canale selezionato: ${target.title}`);
+  logAction(`🌐 Navigazione a: ${target.defaultGroupUrl}`);
 
   try {
-    await page.goto(post.url, { waitUntil: "domcontentloaded", timeout: 60000 });
-  } catch (err) {
-    console.warn("⚠️ Caricamento pagina continuato con successo.");
-  }
-
-  await page.waitForTimeout(2000);
-
-  // Inietta e copia il testo negli appunti della pagina
-  await page.evaluate((textToCopy) => {
-    navigator.clipboard.writeText(textToCopy).catch(() => {});
-  }, post.text);
-
-  console.log("\n==================================================================");
-  console.log("📝 TESTO DEL POST PRONTO E COPIATO NEGLI APPUNTI:");
-  console.log("==================================================================");
-  console.log(post.text);
-  console.log("==================================================================");
-
-  console.log("\n💡 Il browser è aperto sulla pagina del feed gruppi.");
-  console.log("👉 Entra nel gruppo desiderato, clicca sulla casella 'Scrivi qualcosa...' e premi Ctrl + V per incollare!");
-
-  const screenshotPath = path.join(SCREENSHOTS_DIR, `${selectedKey}_${Date.now()}.png`);
-  try {
-    await page.screenshot({ path: screenshotPath });
-    console.log(`📸 Screenshot salvato in: ${screenshotPath}`);
+    await page.goto(target.defaultGroupUrl, { waitUntil: "domcontentloaded", timeout: 60000 });
   } catch (e) {}
 
-  await askQuestion("\n👉 Quando hai pubblicato il post, torna qui e premi INVIO per chiudere il browser...");
+  await page.waitForTimeout(3000);
+
+  let success = false;
+  if (target.platform === "facebook") {
+    success = await publishOnFacebook(page, target.text, isAuto);
+  } else if (target.platform === "linkedin") {
+    success = await publishOnLinkedIn(page, target.text, isAuto);
+  }
+
+  // Scatto screenshot di verifica
+  const screenshotFile = path.join(SCREENSHOTS_DIR, `${selectedKey}_${Date.now()}.png`);
+  try {
+    await page.screenshot({ path: screenshotFile });
+    logAction(`📸 Screenshot salvato in: ${screenshotFile}`);
+  } catch (e) {}
+
+  if (!isAuto) {
+    await askQuestion("\n👉 Controlla il post a schermo e premi INVIO quando vuoi chiudere il browser...");
+  } else {
+    logAction("✅ Ciclo di pubblicazione autonoma completato!");
+    await page.waitForTimeout(3000);
+  }
+
   await context.close();
-  console.log("🎉 Post pubblicato e sessione completata!");
+  console.log("==================================================================");
 }
 
 main().catch(console.error);

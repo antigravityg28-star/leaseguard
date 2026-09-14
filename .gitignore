@@ -39,3 +39,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local browser session and logs
+scripts/.browser_session/
+scripts/screenshots/
+*.log

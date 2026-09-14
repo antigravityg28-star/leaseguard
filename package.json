@@ -9,6 +9,7 @@
     "lint": "eslint",
     "outreach": "node scripts/b2b_outreach.js",
     "post:social": "node scripts/social_autoposter.js",
+    "post:auto": "node scripts/social_autoposter.js --auto",
     "post:social:login": "node scripts/social_autoposter.js --login"
   },
   "dependencies": {
